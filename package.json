@@ -1,6 +1,6 @@
 {
   "name": "lege-check",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Verifică citările de lege dintr-un fișier Markdown contra formei consolidate de azi de pe legislatie.just.ro. Checks Romanian law citations in a Markdown file against today's consolidated text.",
   "type": "module",
   "bin": {
