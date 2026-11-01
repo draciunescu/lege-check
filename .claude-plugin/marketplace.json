@@ -1,6 +1,9 @@
 {
   "name": "lege-check",
-  "owner": { "name": "Denis Craciunescu" },
+  "owner": {
+    "name": "Denis Craciunescu"
+  },
+  "description": "Verificarea citărilor de lege românești contra formei consolidate de azi de pe legislatie.just.ro.",
   "plugins": [
     {
       "name": "lege-check",
