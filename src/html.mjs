@@ -1,4 +1,4 @@
-const decode = (s) =>
+export const decode = (s) =>
   s
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
@@ -30,6 +30,8 @@ export const history = (html) => {
 const BLOCK_CLASS = /^S_(ART|ALN|LIT|PAR|NTA|NTA_PAR|CAP|SEC|TTL|TIT|PRT|CRT|PCT|SMN_PAR|DEN|HDR|PUB|ANX|ANX_TTL)$/;
 const VOID = new Set(['br', 'img', 'input', 'hr', 'meta', 'link', 'col', 'wbr']);
 export const ARTICLE_BREAK = '\n=====\n';
+export const NOTE_START = '⟦notă⟧';
+export const NOTE_END = '⟦/notă⟧';
 
 export const toText = (html) => {
   const out = [];
@@ -49,20 +51,25 @@ export const toText = (html) => {
     if (m[1]) {
       const at = stack.map((e) => e.tag).lastIndexOf(tag);
       if (at < 0) continue;
-      for (const e of stack.splice(at)) if (e.skip) skip--;
+      for (const e of stack.splice(at)) {
+        if (e.skip) skip--;
+        if (e.note) out.push(`\n${NOTE_END}\n`);
+      }
       continue;
     }
     const cls = (m[3].match(/class="([^"]*)"/) || [])[1] || '';
     const isSkip = cls === 'TAG_COLLAPSED' || cls.endsWith('_SHORT') || tag === 'script' || tag === 'style';
-    stack.push({ tag, skip: isSkip });
+    const isNote = cls === 'S_NTA' && !skip;
+    stack.push({ tag, skip: isSkip, note: isNote });
     if (isSkip) skip++;
     else if (!skip && cls === 'S_ART') out.push(ARTICLE_BREAK);
+    else if (isNote) out.push(`\n${NOTE_START}\n`);
     else if (!skip && (BLOCK_CLASS.test(cls) || /display:\s*block/.test(m[3]) || ['div', 'p', 'li', 'tr', 'table'].includes(tag))) out.push('\n');
   }
   return out
     .join('')
     .split('\n')
-    .map((l) => l.replace(/[ \t ]+/g, ' ').trim())
+    .map((l) => l.replace(/[ \t\u00a0]+/g, ' ').trim())
     .filter((l) => l && l !== '+')
     .join('\n');
 };

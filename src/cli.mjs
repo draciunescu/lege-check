@@ -5,7 +5,7 @@ import { findCitations } from './citations.mjs';
 import { resolveAct, actKey } from './acts.mjs';
 import { loadAct, PortalRefused } from './portal.mjs';
 import { indexArticles, lookup } from './lookup.mjs';
-import { renderMarkdown, renderJson, PROBLEMS } from './report.mjs';
+import { renderMarkdown, renderJson, formLabel, PROBLEMS } from './report.mjs';
 
 const USAGE = `lege-check: verifică citările de lege dintr-un fișier Markdown contra formei consolidate de azi
 
@@ -27,7 +27,14 @@ const options = {
 
 const readInput = (file) => readFileSync(file === '-' ? 0 : file, 'utf8');
 
+const maxChars = (raw) => {
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) throw new Error(`--max-chars trebuie să fie un număr întreg pozitiv, nu ${raw}`);
+  return n;
+};
+
 const check = async (file, values) => {
+  const limit = maxChars(values['max-chars']);
   const defaultAct = values.act ? resolveAct(values.act) : null;
   if (values.act && !defaultAct) throw new Error(`Act nerecunoscut: ${values.act}`);
   const citations = findCitations(readInput(file));
@@ -37,7 +44,7 @@ const check = async (file, values) => {
   for (const citation of citations) {
     const act = citation.act || (citation.actRaw ? null : defaultAct);
     if (!act) {
-      results.push({ citation, status: citation.actRaw ? 'act-necunoscut' : 'fara-act' });
+      results.push(citation.actRaw ? { citation, status: 'act-necunoscut', missing: citation.actRaw } : { citation, status: 'fara-act' });
       continue;
     }
     const key = actKey(act);
@@ -49,7 +56,7 @@ const check = async (file, values) => {
     results.push({ citation, ...lookup(indexes.get(key), citation) });
   }
   const label = file === '-' ? 'stdin' : file;
-  console.log(values.json ? renderJson(label, results, sources) : renderMarkdown(label, results, sources, { maxChars: Number(values['max-chars']) }));
+  console.log(values.json ? renderJson(label, results, sources) : renderMarkdown(label, results, sources, { maxChars: limit }));
   return results.some((r) => PROBLEMS.has(r.status)) ? 1 : 0;
 };
 
@@ -60,7 +67,7 @@ const art = async (actName, article, paragraph, values) => {
   const citation = { article, paragraphs: paragraph ? [paragraph] : [], letter: null };
   const result = lookup(indexArticles(loaded.text), citation);
   console.log(`${act.label}, art. ${article}${paragraph ? ` alin. (${paragraph})` : ''}: ${result.status}`);
-  console.log(`${loaded.source}, consolidarea din ${loaded.consolidation || 'necunoscută'}`);
+  console.log(`${loaded.source}, ${formLabel(loaded)}`);
   if (result.lastModified) console.log(`Ultima modificare notată: ${result.lastModified}`);
   if (result.text) console.log(`\n${result.text}`);
   return result.status === 'ok' ? 0 : 1;
@@ -69,9 +76,9 @@ const art = async (actName, article, paragraph, values) => {
 const main = async () => {
   const { values, positionals } = parseArgs({ options, allowPositionals: true });
   const [command, ...rest] = positionals;
-  if (values.help || !command) {
+  if (values.help) {
     console.log(USAGE);
-    return command ? 0 : 2;
+    return 0;
   }
   if (command === 'check' && rest.length === 1) return check(rest[0], values);
   if (command === 'art' && rest.length >= 2) return art(rest[0], rest[1], rest[2], values);

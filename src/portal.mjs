@@ -1,11 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { toText, consolidatedBlock, history, dmy } from './html.mjs';
+import { toText, consolidatedBlock, history, dmy, decode } from './html.mjs';
 
 export const HOST = 'https://legislatie.just.ro';
 const SOAP = `${HOST}/apiws/FreeWebService.svc/SOAP`;
 const GAP_MS = 1100;
+const TIMEOUT_MS = 60_000;
+const CACHE_FORMAT = 2;
 
 export class PortalRefused extends Error {}
 
@@ -17,13 +19,13 @@ const throttle = async () => {
 };
 
 const refused = (what, detail) =>
-  new PortalRefused(`Portalul a refuzat cererea (${what}: ${detail}). Nu insistăm și nu ocolim blocajul. Încearcă de pe o conexiune obișnuită sau mai târziu.`);
+  new PortalRefused(`Portalul nu a răspuns sau a refuzat cererea (${what}: ${detail}). Nu insistăm și nu ocolim blocajul. Încearcă de pe o conexiune obișnuită sau mai târziu.`);
 
 const request = async (url, init, what) => {
   await throttle();
   let res;
   try {
-    res = await fetch(url, init);
+    res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
   } catch (e) {
     throw refused(what, e.cause?.code || e.message);
   }
@@ -32,15 +34,6 @@ const request = async (url, init, what) => {
   if (!res.ok) throw new Error(`${what}: HTTP ${res.status}`);
   return body;
 };
-
-const decode = (s) =>
-  s
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
-    .replace(/&amp;/g, '&');
 
 const field = (item, name) => decode((item.match(new RegExp(`<a:${name}>([\\s\\S]*?)</a:${name}>`)) || [])[1] || '');
 
@@ -65,25 +58,29 @@ const getToken = async () => {
 const PAGE = 10;
 const MAX_PAGES = 10;
 
+const titleYear = (titlu) => Number((titlu.match(/\bnr\.?\s*\d+\s+din\s+\d{1,2}\s+\S+\s+(\d{4})/i) || [])[1]) || null;
+
 const search = async (token, act) => {
-  const items = [];
-  for (let page = 0; page < MAX_PAGES; page++) {
+  const seen = new Map();
+  const isAct = (h) => h.tip === act.tip && h.numar === String(act.numar) && titleYear(h.titlu) === act.an;
+  for (let page = 1; page <= MAX_PAGES; page++) {
     const xml = await soap(
       'Search',
       `<Search xmlns="http://tempuri.org/"><SearchModel xmlns:d="http://schemas.datacontract.org/2004/07/FreeWebService" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><d:NumarPagina>${page}</d:NumarPagina><d:RezultatePagina>${PAGE}</d:RezultatePagina><d:SearchAn>${act.an}</d:SearchAn><d:SearchNumar>${act.numar}</d:SearchNumar><d:SearchText i:nil="true"/><d:SearchTitlu i:nil="true"/></SearchModel><tokenKey>${token}</tokenKey></Search>`,
     );
-    const found = [...xml.matchAll(/<a:Legi>([\s\S]*?)<\/a:Legi>/g)].map(([, item]) => item);
-    items.push(...found);
-    if (found.length < PAGE) break;
+    const items = [...xml.matchAll(/<a:Legi>([\s\S]*?)<\/a:Legi>/g)].map(([, item]) => ({
+      tip: field(item, 'TipAct'),
+      numar: field(item, 'Numar'),
+      titlu: field(item, 'Titlu'),
+      vigoare: field(item, 'DataVigoare'),
+      link: field(item, 'LinkHtml'),
+    }));
+    const fresh = items.filter((h) => !seen.has(h.link));
+    for (const h of fresh) seen.set(h.link, h);
+    if (fresh.some(isAct) || items.length < PAGE || !fresh.length) break;
   }
-  const hits = items
-    .map((item) => ({ tip: field(item, 'TipAct'), numar: field(item, 'Numar'), vigoare: field(item, 'DataVigoare'), link: field(item, 'LinkHtml') }))
-    .filter((h) => h.tip === act.tip && h.numar === String(act.numar))
-    .sort((a, b) => a.vigoare.localeCompare(b.vigoare));
-  if (!hits.length) {
-    const seen = [...new Set(items.map((i) => `${field(i, 'TipAct')} ${field(i, 'Numar')}`))].slice(0, 6).join(', ');
-    throw new Error(`Nu am găsit ${act.tip} ${act.numar}/${act.an} pe portal${seen ? ` (am văzut: ${seen})` : ''}`);
-  }
+  const hits = [...seen.values()].filter(isAct).sort((a, b) => a.vigoare.localeCompare(b.vigoare));
+  if (!hits.length) throw new Error(`Nu am găsit ${act.tip} nr. ${act.numar}/${act.an} în căutarea portalului (${seen.size} rezultate citite)`);
   const id = (hits[0].link.match(/DetaliiDocument\/(\d+)/) || [])[1];
   if (!id) throw new Error(`Căutare ${act.tip} ${act.numar}/${act.an}: link fără DetaliiDocument (${hits[0].link})`);
   return id;
@@ -128,7 +125,7 @@ const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/B
 
 export const loadAct = async (act, { fresh = false } = {}) => {
   const dir = cacheDir();
-  const file = join(dir, `${act.tip}-${act.numar}-${act.an}-${today()}.json`.replace(/[^\w.-]/g, '_'));
+  const file = join(dir, `${act.tip}-${act.numar}-${act.an}-${today()}-v${CACHE_FORMAT}.json`.replace(/[^\w.-]/g, '_'));
   if (!fresh && existsSync(file)) return JSON.parse(readFileSync(file, 'utf8'));
   const result = await fetchAct(act);
   mkdirSync(dir, { recursive: true });

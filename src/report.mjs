@@ -10,6 +10,8 @@ const LABEL = {
 
 export const PROBLEMS = new Set(['abrogat', 'articol-negasit', 'alineat-negasit', 'litera-negasita', 'act-necunoscut', 'fara-act']);
 
+export const formLabel = (s) => (s.consolidation ? `consolidarea din ${s.consolidation}` : 'fără consolidări listate pe portal (forma publicată)');
+
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max).trimEnd()} […]` : text);
 
 const quote = (text, max) =>
@@ -23,7 +25,7 @@ export const renderMarkdown = (file, results, sources, { maxChars = 700 } = {}) 
   const problems = results.filter((r) => PROBLEMS.has(r.status)).length;
   out.push(`${results.length} citări, ${problems} de verificat.`, '');
   out.push('Textul de mai jos e forma consolidată de pe legislatie.just.ro, neoficială și fără forță juridică. Singurul text oficial este cel din Monitorul Oficial.', '');
-  for (const [label, s] of sources) out.push(`- ${label}: ${s.source}, consolidarea din ${s.consolidation || 'necunoscută'}`);
+  for (const [label, s] of sources) out.push(`- ${label}: ${s.source}, ${formLabel(s)}`);
   out.push('');
   for (const r of results) {
     const mark = r.status === 'ok' ? 'OK' : 'DE VERIFICAT';
@@ -40,11 +42,17 @@ export const renderJson = (file, results, sources) =>
   JSON.stringify(
     {
       file,
-      sources: Object.fromEntries(sources),
+      sources: Object.fromEntries([...sources].map(([label, s]) => [label, { source: s.source, consolidation: s.consolidation }])),
       citations: results.map((r) => ({
         line: r.citation.line,
         citation: r.citation.raw,
+        act: r.citation.act?.label || r.citation.actRaw,
+        article: r.citation.article,
+        paragraphs: r.citation.paragraphs,
+        letter: r.citation.letter,
         status: r.status,
+        missing: r.missing || null,
+        duplicates: r.duplicates || 0,
         lastModified: r.lastModified || null,
         text: r.text || null,
       })),
