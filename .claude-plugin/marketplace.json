@@ -1,0 +1,11 @@
+{
+  "name": "lege-check",
+  "owner": { "name": "Denis Craciunescu" },
+  "plugins": [
+    {
+      "name": "lege-check",
+      "source": "./",
+      "description": "Verifică citările de lege dintr-un fișier Markdown contra formei consolidate de azi de pe legislatie.just.ro."
+    }
+  ]
+}

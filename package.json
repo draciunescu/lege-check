@@ -1,0 +1,25 @@
+{
+  "name": "lege-check",
+  "version": "0.1.0",
+  "description": "Verifică citările de lege dintr-un fișier Markdown contra formei consolidate de azi de pe legislatie.just.ro. Checks Romanian law citations in a Markdown file against today's consolidated text.",
+  "type": "module",
+  "bin": {
+    "lege-check": "src/cli.mjs"
+  },
+  "files": [
+    "src",
+    "skills",
+    ".claude-plugin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": ["romania", "legislatie", "legislatie.just.ro", "citations", "claude-skill", "cli"],
+  "author": "Denis Craciunescu",
+  "license": "MIT"
+}

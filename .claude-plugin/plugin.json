@@ -1,0 +1,8 @@
+{
+  "name": "lege-check",
+  "version": "0.1.0",
+  "description": "Verifică citările de lege dintr-un fișier Markdown contra formei consolidate de azi de pe legislatie.just.ro.",
+  "author": { "name": "Denis Craciunescu" },
+  "license": "MIT",
+  "keywords": ["romania", "legislatie", "citations"]
+}
