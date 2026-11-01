@@ -43,7 +43,14 @@ lege-check check fișier.md [--act "Codul muncii"] [--json] [--fresh] [--max-cha
 lege-check art "Codul muncii" 41 1
 ```
 
-Recunoaște: „art. 41”, „art. 52^1”, „alin. (1) și (2)”, „lit. a)”, „din Codul muncii / civil / penal / de procedură civilă / penală / fiscal / de procedură fiscală”, abrevieri (CM, CPC, CPP, CP, CF, CPF), „Legea nr. 31/1990”, „OUG”, „OG”, „HG”, și forma „Legea 31/1990, art. 194”. Citările din blocuri de cod sunt ignorate. Cod de ieșire: 0 totul găsit, 1 există citări de verificat, 2 eroare.
+Recunoaște:
+- articole: „art. 41”, „articolul 41”, „art. 1.350” (punct de mii), „art. 52^1”, „art. 52¹”, „art. 52 ind. 1”;
+- alineate și litere: „alin. (1) și (2)”, „lit. a)”;
+- coduri: muncii, civil, penal, de procedură civilă, de procedură penală, fiscal, de procedură fiscală, administrativ, și la genitiv („Codului muncii”), plus abrevieri (CM, C. civ., CPC, CPP, CP, CF, CPF, C. muncii);
+- acte numerotate: „Legea nr. 31/1990”, „Legea societăților nr. 31/1990”, „Legea nr. 283 din 17 octombrie 2022”, „OUG”, „O.U.G.”, „OG”, „HG”;
+- forma cu actul înainte: „Legea 31/1990, art. 194”.
+
+O citare cu un act pe care unealta nu îl cunoaște („art. 16 din Constituție”) iese „act nerecunoscut”, nu primește actul din `--act`. `--act` se aplică doar citărilor care nu numesc niciun act. Citările din blocuri de cod sunt ignorate. Cod de ieșire: 0 totul găsit, 1 există citări de verificat, 2 eroare.
 
 ### Ce nu face
 
@@ -58,10 +65,6 @@ Recunoaște: „art. 41”, „art. 52^1”, „alin. (1) și (2)”, „lit. a)
 - Nu schimbă user-agentul, nu folosește proxy. Dacă portalul refuză (HTTP 403, conexiune închisă, adrese de cloud sau de datacenter sunt de obicei refuzate), unealta se oprește și spune asta.
 - Nu include și nu publică texte de lege.
 - Pagina portalului poate să se schimbe; dacă extragerea se strică, deschide un issue.
-
-### Alte proiecte
-
-[sw33tr/claude-legislatie-ro](https://github.com/sw33tr/claude-legislatie-ro), [rboarescu/legislatie-ro-mcp](https://github.com/rboarescu/legislatie-ro-mcp), [matematicsolutions/ro-eli-mcp](https://github.com/matematicsolutions/ro-eli-mcp), [emilzaman/drept-ro](https://github.com/emilzaman/drept-ro), [lexifina/romania-law](https://github.com/lexifina/romania-law). Aici accentul e pe verificarea unui fișier întreg, local, fără server MCP.
 
 Licență: MIT.
 
@@ -93,7 +96,7 @@ lege-check check file.md [--act "Codul muncii"] [--json] [--fresh] [--max-chars 
 lege-check art "Codul muncii" 41 1
 ```
 
-It understands article numbers with superscripts (`art. 52^1`), several paragraphs, letters, the main codes (labour, civil, criminal, civil and criminal procedure, tax, tax procedure) and their abbreviations, numbered acts (`Legea nr. 31/1990`, `OUG`, `OG`, `HG`), and the act-first form (`Legea 31/1990, art. 194`). `--act` sets the act for citations that name none. Exit code: 0 all found, 1 some citations need a look, 2 error.
+It understands article numbers with thousands separators (`art. 1.350`) and superscripts (`art. 52^1`, `52¹`, `52 ind. 1`), several paragraphs, letters, the main codes (labour, civil, criminal, civil and criminal procedure, tax, tax procedure, administrative) in the nominative and genitive with their abbreviations, numbered acts (`Legea nr. 31/1990`, `Legea societăților nr. 31/1990`, `Legea nr. 283 din 17 octombrie 2022`, `OUG`, `OG`, `HG`), and the act-first form (`Legea 31/1990, art. 194`). A citation naming an act the tool does not know (`art. 16 din Constituție`) is reported as an unknown act, never given the `--act` default; `--act` only applies to citations that name no act. Exit code: 0 all found, 1 some citations need a look, 2 error.
 
 ### What it does not do
 
@@ -104,9 +107,5 @@ It understands article numbers with superscripts (`art. 52^1`), several paragrap
 ### How it treats the portal
 
 Runs on your machine, one request per second, a per-day local cache in `~/.cache/lege-check` (or `LEGE_CHECK_CACHE`), no user-agent tricks, no proxies. If the portal refuses the request (it usually refuses cloud and datacenter addresses), the tool stops and says so. No law text is bundled. The portal's HTML may change; if extraction breaks, open an issue.
-
-### Other projects
-
-See the list in the Romanian section above. This one focuses on checking a whole file locally, with no MCP server.
 
 License: MIT.
