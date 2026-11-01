@@ -26,13 +26,13 @@ DE VERIFICAT: articolul nu există în forma de azi
 Node 22 sau mai nou, fără alte dependențe.
 
 ```bash
-npx github:deniskrr/lege-check check fișier.md --act "Codul muncii"
+npx github:draciunescu/lege-check check fișier.md --act "Codul muncii"
 ```
 
 Ca plugin Claude Code:
 
 ```
-/plugin marketplace add deniskrr/lege-check
+/plugin marketplace add draciunescu/lege-check
 /plugin install lege-check@lege-check
 ```
 
@@ -76,13 +76,13 @@ Why: a text with law references (a memo, an article, a contract, an AI-generated
 Node 22 or newer, no other dependencies.
 
 ```bash
-npx github:deniskrr/lege-check check file.md --act "Codul muncii"
+npx github:draciunescu/lege-check check file.md --act "Codul muncii"
 ```
 
 As a Claude Code plugin:
 
 ```
-/plugin marketplace add deniskrr/lege-check
+/plugin marketplace add draciunescu/lege-check
 /plugin install lege-check@lege-check
 ```
 
